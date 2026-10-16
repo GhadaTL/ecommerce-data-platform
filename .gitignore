@@ -1,0 +1,25 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Local datasets
+data/raw/*
+data/processed/*
+
+# ML artifacts and experiments
+ml/artifacts/
+mlruns/
+
+# Editors and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

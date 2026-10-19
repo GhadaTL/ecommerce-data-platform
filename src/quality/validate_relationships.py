@@ -1,0 +1,104 @@
+
+from pathlib import Path
+import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[2]
+RAW = ROOT / "data" / "raw"
+
+
+def load_csv(name):
+    return pd.read_csv(RAW / name, low_memory=False)
+
+
+def check_unique(df, columns, table):
+    duplicates = df.duplicated(subset=columns).sum()
+    nulls = df[columns].isna().any(axis=1).sum()
+
+    print(
+        f"{table}: key={columns}, "
+        f"duplicate keys={duplicates:,}, "
+        f"rows with null key={nulls:,}"
+    )
+
+
+def check_foreign_key(child, child_col, parent, parent_col, label):
+    child_values = child[child_col].dropna().unique()
+    parent_values = set(parent[parent_col].dropna().unique())
+    missing = sum(value not in parent_values for value in child_values)
+
+    print(
+        f"{label}: distinct child values={len(child_values):,}, "
+        f"values without parent={missing:,}"
+    )
+
+
+def main():
+    orders = load_csv("olist_orders_dataset.csv")
+    customers = load_csv("olist_customers_dataset.csv")
+    items = load_csv("olist_order_items_dataset.csv")
+    payments = load_csv("olist_order_payments_dataset.csv")
+    reviews = load_csv("olist_order_reviews_dataset.csv")
+    products = load_csv("olist_products_dataset.csv")
+    sellers = load_csv("olist_sellers_dataset.csv")
+    translations = load_csv("product_category_name_translation.csv")
+
+    print("\n=== PRIMARY / CANDIDATE KEYS ===")
+    check_unique(orders, ["order_id"], "orders")
+    check_unique(customers, ["customer_id"], "customers")
+    check_unique(products, ["product_id"], "products")
+    check_unique(sellers, ["seller_id"], "sellers")
+    check_unique(items, ["order_id", "order_item_id"], "order_items")
+    check_unique(
+        payments,
+        ["order_id", "payment_sequential"],
+        "order_payments",
+    )
+    check_unique(reviews, ["review_id"], "order_reviews")
+    check_unique(
+        translations,
+        ["product_category_name"],
+        "category_translation",
+    )
+
+    print("\n=== FOREIGN KEY CHECKS ===")
+    check_foreign_key(
+        orders, "customer_id", customers, "customer_id",
+        "orders.customer_id -> customers.customer_id",
+    )
+    check_foreign_key(
+        items, "order_id", orders, "order_id",
+        "order_items.order_id -> orders.order_id",
+    )
+    check_foreign_key(
+        items, "product_id", products, "product_id",
+        "order_items.product_id -> products.product_id",
+    )
+    check_foreign_key(
+        items, "seller_id", sellers, "seller_id",
+        "order_items.seller_id -> sellers.seller_id",
+    )
+    check_foreign_key(
+        payments, "order_id", orders, "order_id",
+        "order_payments.order_id -> orders.order_id",
+    )
+    check_foreign_key(
+        reviews, "order_id", orders, "order_id",
+        "order_reviews.order_id -> orders.order_id",
+    )
+
+    print("\n=== CATEGORY TRANSLATION COVERAGE ===")
+    product_categories = set(
+        products["product_category_name"].dropna().unique()
+    )
+    translated_categories = set(
+        translations["product_category_name"].dropna().unique()
+    )
+    unmatched = product_categories - translated_categories
+
+    print(f"Distinct non-null product categories: {len(product_categories)}")
+    print(f"Categories without translation: {len(unmatched)}")
+    print(sorted(unmatched))
+
+
+if __name__ == "__main__":
+    main()

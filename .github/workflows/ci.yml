@@ -1,0 +1,29 @@
+
+name: Data Engineering CI #automation name
+
+on:
+  push:
+    branches: [main] #trigger the workflow on push events to the main branch  
+  pull_request:
+    branches: [main] #trigger the workflow on pull request events targeting the main branch
+
+jobs: #what jobs to run in the workflow
+  test: #job name
+    runs-on: ubuntu-latest #use the latest Ubuntu runner for the job 
+
+    steps: #steps executed in the job
+      - name: Checkout repository 
+        uses: actions/checkout@v4 #checkout the repository to the runner
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m pytest -v

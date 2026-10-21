@@ -1,6 +1,8 @@
 
 from pathlib import Path
+
 import pandas as pd
+
 
 ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "data" / "raw"
@@ -10,10 +12,50 @@ def load_csv(name):
     return pd.read_csv(RAW / name, low_memory=False)
 
 
+def count_non_positive_payments(payments):
+    return int((payments["payment_value"] <= 0).sum())
+
+def count_invalid_review_scores(reviews):
+    valid_scores = reviews["review_score"].between(1, 5)
+    return int((~valid_scores).sum())
+
 def report_key(df, columns, table):
     print(f"\n{table}: {columns}")
-    print("  Null key rows:", int(df[columns].isna().any(axis=1).sum()))
-    print("  Duplicate key rows:", int(df.duplicated(columns).sum()))
+    print(
+        "  Null key rows:",
+        int(df[columns].isna().any(axis=1).sum()),
+    )
+    print(
+        "  Duplicate key rows:",
+        int(df.duplicated(columns).sum()),
+    )
+
+def count_negative_item_prices(items):
+    return int((items["price"] < 0).sum())
+
+
+def count_negative_freight_values(items):
+    return int((items["freight_value"] < 0).sum())
+
+def count_invalid_product_dimensions(products, column):
+    values = products[column]
+
+    return {
+        "zero": int((values == 0).sum()),
+        "negative": int((values < 0).sum()),
+        "missing": int(values.isna().sum()),
+    }
+
+
+def count_invalid_coordinates(geo):
+    invalid_lat = ~geo["geolocation_lat"].between(-90, 90)
+    invalid_lng = ~geo["geolocation_lng"].between(-180, 180)
+
+    return {
+        "invalid_latitude": int(invalid_lat.sum()),
+        "invalid_longitude": int(invalid_lng.sum()),
+    }
+
 
 
 def main():
@@ -29,10 +71,22 @@ def main():
     report_key(reviews, ["order_id"], "reviews")
 
     print("\n=== NUMERIC VALUE CHECKS ===")
-    print("Negative item prices:", int((items["price"] < 0).sum()))
-    print("Negative freight values:", int((items["freight_value"] < 0).sum()))
-    print("Non-positive payment values:", int((payments["payment_value"] <= 0).sum()))
-    print("Review scores outside 1-5:", int((~reviews["review_score"].between(1, 5)).sum()))
+    print(
+    "Negative item prices:",
+    count_negative_item_prices(items),
+    )
+    print(
+    "Negative freight values:",
+    count_negative_freight_values(items),
+    )
+    print(
+        "Non-positive payment values:",
+        count_non_positive_payments(payments),
+    )
+    print(
+    "Review scores outside 1-5:",
+    count_invalid_review_scores(reviews),
+    )
 
     print("\n=== PRODUCT DIMENSIONS ===")
     dimension_columns = [
@@ -41,18 +95,30 @@ def main():
         "product_height_cm",
         "product_width_cm",
     ]
-    for column in dimension_columns:
-        print(
-            f"{column}: zero={int((products[column] == 0).sum())}, "
-            f"negative={int((products[column] < 0).sum())}, "
-            f"missing={int(products[column].isna().sum())}"
-        )
 
+    for column in dimension_columns:
+        counts = count_invalid_product_dimensions(products, column)
+
+        print(
+            f"{column}: zero={counts['zero']}, "
+            f"negative={counts['negative']}, "
+            f"missing={counts['missing']}"
+        )
+    
     print("\n=== GEOLOCATION RANGES ===")
-    invalid_lat = ~geo["geolocation_lat"].between(-90, 90)
-    invalid_lng = ~geo["geolocation_lng"].between(-180, 180)
-    print("Invalid latitude rows:", int(invalid_lat.sum()))
-    print("Invalid longitude rows:", int(invalid_lng.sum()))
+
+    coordinate_errors = count_invalid_coordinates(geo)
+
+    print(
+        "Invalid latitude rows:",
+        coordinate_errors["invalid_latitude"],
+    )
+    print(
+        "Invalid longitude rows:",
+        coordinate_errors["invalid_longitude"],
+    )
+
+
     print("\n=== NON-POSITIVE PAYMENTS ===")
     print(
         payments.loc[
@@ -66,6 +132,7 @@ def main():
             ],
         ].to_string(index=False)
     )
+
     print("\n=== ALL PAYMENTS FOR AFFECTED ORDERS ===")
 
     affected_orders = payments.loc[
@@ -87,6 +154,7 @@ def main():
             ]
         ].to_string(index=False)
     )
+
 
 if __name__ == "__main__":
     main()

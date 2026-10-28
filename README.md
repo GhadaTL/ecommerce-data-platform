@@ -2,7 +2,9 @@
 
 ## Overview
 
-An end-to-end data engineering portfolio project built with the Brazilian E-Commerce Public Dataset by Olist. The platform aims to transform raw e-commerce data into reliable analytical datasets and support business analytics and late-delivery prediction.
+An end-to-end data engineering portfolio project built using the Brazilian E-Commerce Public Dataset by Olist. The platform transforms raw e-commerce data into structured, quality-checked datasets and lays the foundation for business analytics and late-delivery prediction.
+
+The project follows a layered data architecture (Bronze, Silver, and planned Gold) and combines Python-based ETL processing with SQL transformations using dbt and DuckDB.
 
 ## Objectives
 
@@ -10,25 +12,42 @@ An end-to-end data engineering portfolio project built with the Brazilian E-Comm
 - Organize data into Bronze, Silver, and Gold layers.
 - Implement reusable data quality and relationship validation checks.
 - Generate data quality reports to identify potential issues.
+- Build modular SQL transformation models with dbt.
+- Prepare analytical datasets for business intelligence and late-delivery prediction.
 - Orchestrate workflows with Apache Airflow.
-- Build analytical data models using dbt.
 - Track machine learning experiments with MLflow.
-- Automate testing and build workflows with CI/CD.
+- Automate testing and integration workflows with CI/CD.
 - Containerize applications using Docker.
 - Explore local deployment with Kubernetes.
-- Monitor pipeline execution and services.
+- Monitor pipeline execution and data quality.
 
 ## Technology Stack
 
-**Currently used:** Python, pandas, pytest, Git, GitHub, GitHub Actions.
+**Currently implemented:**
+- Python
+- pandas
+- pytest
+- SQL
+- dbt
+- DuckDB
+- Git and GitHub
+- GitHub Actions
 
-**Planned:** DuckDB, dbt, PostgreSQL, MinIO, Apache Airflow, MLflow, Apache Kafka, Docker, Kubernetes, Prometheus, and Grafana.
+**Planned or to be extended:**
+- Apache Airflow
+- PostgreSQL
+- MinIO
+- MLflow
+- Apache Kafka
+- Docker-based application containerization
+- Kubernetes
+- Prometheus and Grafana
 
-The stack will evolve as new pipeline components are implemented.
+Docker Desktop is installed in the development environment. Additional orchestration, deployment, streaming, and monitoring components will be implemented in later stages.
 
 ## Dataset
 
-Brazilian E-Commerce Public Dataset by Olist.
+**Brazilian E-Commerce Public Dataset by Olist**
 
 Source: [Olist dataset on Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
 
@@ -62,6 +81,17 @@ Raw dataset files are stored locally and are not committed to the repository.
 - Automated tests using pytest.
 - Tests for ETL transformations, data quality functions, and relationship validation.
 - GitHub Actions workflow to run tests on pushes and pull requests targeting `main`.
+- Latest confirmed test result: 22 tests passed.
+
+### 4. dbt Staging Models
+
+- Configure a dbt project using DuckDB as the local analytical database.
+- Connect dbt to the local DuckDB warehouse.
+- Create nine staging SQL models based on the Silver CSV datasets.
+- Build views for customers, orders, order items, payments, reviews, products, sellers, geolocation, and product category translations.
+- Execute all nine staging models successfully.
+
+The staging models provide a consistent starting point for subsequent transformations. Intermediate models and analytical Gold marts are planned next.
 
 ## Data Quality Findings
 
@@ -70,10 +100,10 @@ Initial profiling and validation of the Olist dataset identified:
 - 261,831 exact duplicate geolocation records removed during Bronze-to-Silver processing.
 - 9 non-positive payment values requiring review.
 - 6 products with zero or missing weights.
-- 814 duplicate-key rows when checking `review_id` alone.
+- 814 rows with duplicated `review_id` values when checking that column alone.
 - 2 product categories without a matching English translation.
 
-These findings are dataset observations, not necessarily proof that every affected record is unusable. Their treatment depends on the relevant business rules.
+These findings describe observed dataset issues and do not necessarily mean that every affected record is unusable. Their treatment depends on the relevant business rules.
 
 ## Project Structure
 
@@ -81,15 +111,31 @@ These findings are dataset observations, not necessarily proof that every affect
 ecommerce-data-platform/
 ├── .github/
 │   └── workflows/
-├── docs/
 ├── dags/
 ├── data/
 │   ├── raw/
 │   ├── bronze/
 │   ├── silver/
-│   └── reports/
+│   ├── processed/
+│   ├── reports/
+│   └── warehouse/
 ├── dbt/
+│   ├── dbt_project.yml
+│   └── models/
+│       ├── staging/
+│       │   ├── stg_category_translation.sql
+│       │   ├── stg_customers.sql
+│       │   ├── stg_geolocation.sql
+│       │   ├── stg_order_items.sql
+│       │   ├── stg_order_payments.sql
+│       │   ├── stg_order_reviews.sql
+│       │   ├── stg_orders.sql
+│       │   ├── stg_products.sql
+│       │   └── stg_sellers.sql
+│       ├── intermediate/
+│       └── marts/
 ├── docker/
+├── docs/
 ├── k8s/
 ├── ml/
 ├── src/
@@ -101,42 +147,68 @@ ecommerce-data-platform/
 └── README.md
 ```
 
-Some directories are reserved for future components and may not contain implemented functionality yet.
+Some directories are reserved for future components and may not contain implemented functionality yet. Local datasets, generated reports, the DuckDB database, and dbt-generated artifacts are excluded from version control.
 
 ## Setup and Execution
 
-### 1. Create and activate a virtual environment
+### Prerequisites
+
+- Python 3.11
+- Git
+- The Olist dataset downloaded from Kaggle
+- dbt Core and the dbt-duckdb adapter for dbt transformations
+
+### 1. Clone the repository
+
+```powershell
+git clone https://github.com/GhadaTL/ecommerce-data-platform.git
+cd ecommerce-data-platform
+```
+
+### 2. Create and activate a virtual environment
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 2. Install Python dependencies
+### 3. Install Python dependencies
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-### 3. Run automated tests
+If dbt dependencies are not included in `requirements.txt`, install them separately:
+
+```powershell
+python -m pip install dbt-core dbt-duckdb
+```
+
+### 4. Prepare the dataset
+
+Download the Olist dataset from Kaggle and place the original CSV files in `data/raw/`.
+
+Run the Python ETL pipeline to generate the Bronze and Silver datasets before executing the dbt models.
+
+### 5. Run automated tests
 
 ```powershell
 python -m pytest -v
 ```
 
-### 4. Run data quality validation
+### 6. Run data quality validation
 
 ```powershell
 python -m src.quality.validate_data_quality
 ```
 
-### 5. Validate table relationships
+### 7. Validate table relationships
 
 ```powershell
 python -m src.quality.validate_relationships
 ```
 
-### 6. Generate the data quality report
+### 8. Generate the data quality report
 
 ```powershell
 python -m src.quality.generate_quality_report
@@ -146,7 +218,18 @@ The generated report is written to:
 
 `data/reports/data_quality_report.json`
 
-The raw dataset must be downloaded separately and placed in `data/raw/` before running the pipeline.
+### 9. Run dbt staging models
+
+From the repository root:
+
+```powershell
+dbt debug --project-dir dbt
+dbt run --project-dir dbt --select staging
+```
+
+The dbt project uses a DuckDB profile configured locally in `~/.dbt/profiles.yml`. The default warehouse location is `data/warehouse/ecommerce.duckdb`.
+
+The warehouse database and generated dbt files are local artifacts and are not committed to GitHub.
 
 ## Project Roadmap
 
@@ -156,13 +239,17 @@ The raw dataset must be downloaded separately and placed in `data/raw/` before r
 - [x] Relationship validation
 - [x] JSON data quality reporting
 - [x] Automated tests and GitHub Actions CI
-- [ ] Analytical Gold layer with dbt
-- [ ] Analytical database integration
-- [ ] Workflow orchestration with Airflow
+- [x] dbt project setup and DuckDB connection
+- [x] Nine dbt staging models
+- [ ] Intermediate transformations with dbt
+- [ ] Analytical Gold marts
+- [ ] Analytical database integration beyond the current DuckDB setup
+- [ ] Workflow orchestration with Apache Airflow
 - [ ] Late-delivery prediction and ML experiment tracking
 - [ ] Containerization and local deployment
+- [ ] Streaming pipeline implementation
 - [ ] Pipeline monitoring and observability
 
 ## License and Data
 
-Dataset usage is subject to the original dataset terms. Raw data, generated datasets, local reports, credentials, and secrets should not be committed to the repository.
+Dataset usage is subject to the original dataset terms. Raw data, generated datasets, local reports, database files, credentials, and secrets should not be committed to the repository.

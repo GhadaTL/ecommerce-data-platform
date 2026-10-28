@@ -25,3 +25,10 @@ mlruns/
 .idea/
 .DS_Store
 Thumbs.db
+# Local data warehouse
+data/warehouse/
+
+# dbt generated files
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/

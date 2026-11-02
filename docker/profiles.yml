@@ -1,0 +1,8 @@
+
+ecommerce_data_platform:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /opt/airflow/project/data/warehouse/ecommerce.duckdb
+      threads: 4

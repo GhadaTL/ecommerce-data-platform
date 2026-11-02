@@ -67,7 +67,7 @@ def copy_to_bronze():
                 f"Source file not found: {source}"
             )
 
-        shutil.copy2(source, destination)
+        shutil.copyfile(source, destination)
         copied_files.append(filename)
 
         print(f"Copied: {filename}")

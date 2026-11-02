@@ -1,0 +1,35 @@
+
+services:
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow.Dockerfile
+
+    image: ecommerce-airflow:2.11.2
+    container_name: ecommerce-airflow
+
+    command: standalone
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+
+      AIRFLOW_UID: "50000"
+
+      DBT_PROFILES_DIR: /opt/airflow/project/docker
+      ECOMMERCE_DUCKDB_PATH: /opt/airflow/project/data/warehouse/ecommerce.duckdb
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./:/opt/airflow/project
+      - airflow-logs:/opt/airflow/logs
+
+    restart: unless-stopped
+
+volumes:
+  airflow-logs:

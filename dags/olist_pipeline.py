@@ -18,11 +18,11 @@ COMMON_ENV = {
 
 with DAG(
     dag_id="olist_data_pipeline",
-    description="Orchestrate the Olist ETL and dbt transformations",
+    description="Orchestrate the Olist ETL, data quality, observability and dbt transformations",
     start_date=datetime(2026, 1, 1),
     schedule=None,
     catchup=False,
-    tags=["olist", "data-engineering"],
+    tags=["olist", "data-engineering", "observability"],
 ) as dag:
 
     # Task 1: Transform Bronze data into Silver data
@@ -43,7 +43,16 @@ with DAG(
         append_env=True,
     )
 
-    # Task 3: Run dbt transformations and tests
+    # Task 3: Record quality metrics in the historical CSV
+    track_quality_metrics = BashOperator(
+        task_id="track_quality_metrics",
+        bash_command="python -m src.observability.track_quality_metrics",
+        cwd=PROJECT_DIR,
+        env=COMMON_ENV,
+        append_env=True,
+    )
+
+    # Task 4: Run dbt transformations and tests
     dbt_build = BashOperator(
         task_id="dbt_build",
         bash_command="/opt/airflow/dbt-venv/bin/dbt build --project-dir dbt",
@@ -53,4 +62,4 @@ with DAG(
     )
 
     # Define execution order
-    bronze_to_silver >> data_quality >> dbt_build
+    bronze_to_silver >> data_quality >> track_quality_metrics >> dbt_build
